@@ -1,0 +1,110 @@
+<html>
+    <head>
+        <style>
+            html, body { overflow: hidden; padding: 0px; margin: 0px; }
+            canvas { padding: 0px; margin: 0px; }
+        </style>
+    </head>
+    <body>
+        <script src="matter.js"></script>
+        <script>
+            var Engine = Matter.Engine,
+                Render = Matter.Render,
+                Runner = Matter.Runner,
+                Bodies = Matter.Bodies,
+                Composite = Matter.Composite;
+            let engine = Engine.create();
+            let render = Render.create({
+                element: document.body,
+                engine: engine,
+                options: {
+                    width: window.innerWidth, 
+                    height: window.innerHeight, 
+                    wireframes: false,
+                    background: "#78acff"
+                }
+            });
+            let keys = {};
+            document.addEventListener('keydown', function(event) { keys[event.key] = true; });
+            document.addEventListener('keyup', function(event) { delete keys[event.key]; });
+            let offsetX = 100;
+            let offsetY = 200;
+            let carColor = "red";
+            let wheelColor = "gray";
+            let carBase = Bodies.rectangle(400 + offsetX, 200 + offsetY, 200, 20, { render: { fillStyle: carColor } });
+            let wheel1 = Bodies.circle(300 + offsetX, 225 + offsetY, 30, { render: { fillStyle: wheelColor } });
+            let wheel2 = Bodies.circle(500 + offsetX, 225 + offsetY, 30, { render: { fillStyle: wheelColor } });
+            let side1 = Bodies.rectangle(300 + offsetX, 175 + offsetY, 20, 80, { render: { fillStyle: carColor } });
+            let side2 = Bodies.rectangle(500 + offsetX, 175 + offsetY, 20, 80, { render: { fillStyle: carColor } });
+            let egg = Bodies.circle(500, 100 + offsetY, 30, {
+                render: {
+                    fillStyle: "rgba(255, 255, 255, 0.5)"
+                }
+            });
+            let car = Matter.Body.create({
+                parts: [carBase, wheel1, wheel2, side1, side2],
+                friction: 0
+            });
+            let ground = Bodies.rectangle(window.innerWidth / 2, window.innerHeight, 1000000, 60, { isStatic: true });
+            let groundBody = null;
+            let groundWidth = 20;
+            let groundHeight = 20;
+            let groundXOffset = -1000;
+            let groundYOffset = 50;
+            let groundParts = [];
+            let lastGeneratedX = groundXOffset;
+            function generateGround() {
+                while (lastGeneratedX < car.position.x + window.innerWidth) {
+                    let groundY = window.innerHeight - 30 + Math.sin(lastGeneratedX / 100) * groundYOffset - 100;
+                    let groundX = lastGeneratedX;
+                    let groundPart = Bodies.rectangle(groundX, groundY, groundWidth, groundHeight, { isStatic: true });
+                    groundParts.push(groundPart);
+                    Composite.add(engine.world, groundPart);
+                    lastGeneratedX += groundWidth;
+                }
+            }
+            generateGround();
+            ground = Matter.Body.create({
+                parts: groundParts,
+                isStatic: true,
+            });
+            Matter.Composite.add(engine.world, car);
+            Matter.World.add(engine.world, [ground, egg]);
+            Matter.Events.on(engine, 'beforeUpdate', function() {
+                let translateX = -car.position.x + window.innerWidth / 2;
+                let translateY = -car.position.y + window.innerHeight / 2;
+                render.bounds.min.x = -translateX;
+                render.bounds.min.y = -translateY;
+                render.bounds.max.x = render.bounds.min.x + render.options.width;
+                render.bounds.max.y = render.bounds.min.y + render.options.height;
+                Render.lookAt(render, {
+                    min: { x: car.position.x - window.innerWidth / 2, y: car.position.y - window.innerHeight / 2 },
+                    max: { x: car.position.x + window.innerWidth / 2, y: car.position.y + window.innerHeight / 2 - 300 }
+                });
+            });
+        
+            function gameLoop() {
+                if (keys['a']) {
+                    Matter.Body.applyForce(car, {x: car.position.x, y: car.position.y}, {x: -0.01, y: 0});
+                }
+                if (keys['d']) {
+                    Matter.Body.applyForce(car, {x: car.position.x, y: car.position.y}, {x: 0.01, y: 0});
+                }
+                Matter.Events.on(engine, 'collisionStart', function(event) {
+                    var pairs = event.pairs;
+                    for (var i = 0; i < pairs.length; i++) {
+                        var pair = pairs[i];
+                        if ((pair.bodyA === egg && pair.bodyB === ground) || (pair.bodyB === egg && pair.bodyA === ground)) {
+                            window.location.reload();
+                        }
+                    }
+                });
+                Engine.update(engine);
+                Render.world(render);
+                generateGround();
+                requestAnimationFrame(gameLoop);
+            }
+            gameLoop();
+        </script>
+    </body>
+</html>
