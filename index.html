@@ -81,8 +81,7 @@
                     min: { x: car.position.x - window.innerWidth / 2, y: car.position.y - window.innerHeight / 2 },
                     max: { x: car.position.x + window.innerWidth / 2, y: car.position.y + window.innerHeight / 2 - 300 }
                 });
-            });
-        
+            }); 
             function gameLoop() {
                 if (keys['a']) {
                     Matter.Body.applyForce(car, {x: car.position.x, y: car.position.y}, {x: -0.01, y: 0});
